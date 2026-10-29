@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Smart Traffic Monitoring System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- TomTom Maps SDK -->
+<link rel="stylesheet" href="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.23.0/maps/maps.css">
+<script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.23.0/maps/maps-web.min.js"></script>
+
+<style>
+*{
+  box-sizing:border-box;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+body{
+  margin:0;
+  background:linear-gradient(180deg,#020617,#020617 40%,#030712);
+  color:#e5e7eb;
+}
+
+/* UTIL */
+.hidden{display:none}
+.container{padding:32px}
+
+/* BUTTONS */
+button{
+  padding:10px 18px;
+  border:none;
+  border-radius:10px;
+  background:linear-gradient(135deg,#0ea5e9,#22d3ee);
+  color:#020617;
+  font-weight:700;
+  cursor:pointer;
+  transition:all .25s ease;
+  width:auto;
+}
+button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 24px rgba(34,211,238,.35);
+}
+
+.btn-danger{
+  background:linear-gradient(135deg,#fb7185,#f97316);
+  color:white;
+}
+
+.btn-ghost{
+  background:transparent;
+  border:1px solid #334155;
+  color:#e5e7eb;
+}
+
+.btn-ride{
+  background:linear-gradient(135deg,#a78bfa,#22d3ee);
+  color:#020617;
+}
+
+/* INPUTS */
+input{
+  width:100%;
+  padding:14px 14px;
+  margin-top:12px;
+  border-radius:10px;
+  border:1px solid #334155;
+  background:#020617;
+  color:#e5e7eb;
+  font-size:16px;
+}
+input::placeholder{color:#94a3b8}
+
+/* ✅ FIX: ADMIN CITY INPUT ALWAYS VISIBLE + TYPEABLE */
+#adminCity{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  pointer-events:auto !important;
+  position:relative !important;
+  z-index:99999 !important;
+}
+
+/* LOGIN */
+#loginWrapper{
+  max-width:900px;
+  margin:80px auto;
+  display:grid;
+  gap:32px;
+  padding:0 16px;
+}
+.login-box{
+  background:rgba(15,23,42,.75);
+  border:1px solid #1e293b;
+  padding:32px;
+  border-radius:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+}
+#loginWrapper h2{
+  font-size: 34px;
+  font-weight: 800;
+  margin-bottom: 18px;
+}
+
+/* NAV */
+.user-nav,
+.admin-nav{
+  display:none;
+  padding:16px 28px;
+  justify-content:space-between;
+  align-items:center;
+  backdrop-filter:blur(12px);
+  position:sticky;
+  top:0;
+  z-index:100;
+}
+
+.user-nav{
+  background:rgba(2,6,23,.92);
+  border-bottom:1px solid #1e293b;
+}
+.admin-nav{
+  background:rgba(2,6,23,.95);
+  border-bottom:1px solid #334155;
+}
+
+.user-nav a,
+.admin-nav a{
+  color:#e5e7eb;
+  text-decoration:none;
+  font-weight:600;
+  opacity:.85;
+  padding:6px 0;
+}
+.user-nav a:hover,
+.admin-nav a:hover{
+  opacity:1;
+  color:#22d3ee;
+}
+
+/* NAV LINKS + MENU BUTTON */
+.nav-links{
+  display:flex;
+  gap:18px;
+  align-items:center;
+}
+.menu-btn{
+  display:none;
+  font-size:22px;
+  background:none;
+  border:1px solid #334155;
+  color:#e5e7eb;
+  padding:8px 12px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+/* CARDS */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:22px;
+}
+.card{
+  background:rgba(15,23,42,.8);
+  border:1px solid #1e293b;
+  padding:22px;
+  border-radius:18px;
+  box-shadow:0 12px 30px rgba(0,0,0,.35);
+}
+
+/* ALERT STYLE */
+.alert-item{
+  background:rgba(239,68,68,0.15);
+  border:1px solid rgba(239,68,68,0.35);
+  padding:10px 12px;
+  border-radius:12px;
+  margin-bottom:10px;
+  font-size:14px;
+}
+.alert-item b{
+  color:#fca5a5;
+}
+
+/* MAP */
+#navMap{
+  width:100%;
+  height:420px;
+  margin-top:16px;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid #1e293b;
+  background:#000;
+}
+
+/* TABLE */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:16px;
+}
+th{
+  text-align:left;
+  font-weight:700;
+  color:#94a3b8;
+}
+th,td{
+  padding:14px 10px;
+  border-bottom:1px solid #1e293b;
+}
+
+.small-muted{color:#94a3b8;font-size:13px;line-height:1.4}
+.kpi{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.kpi span{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid #1e293b;
+  background:rgba(2,6,23,.65);
+  color:#cbd5e1;
+  font-size:13px;
+  font-weight:600;
+}
+
+/* CAMERA */
+.camera-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:22px;
+}
+.camera{
+  background:#020617;
+  border:1px solid #1e293b;
+  border-radius:18px;
+  padding:16px;
+}
+.feed{
+  height:160px;
+  background:#000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#22d3ee;
+  border-radius:12px;
+  letter-spacing:.5px;
+}
+
+/* MOBILE */
+@media (max-width: 768px){
+  .container{padding:16px;}
+  .user-nav, .admin-nav{
+    flex-wrap:wrap;
+    gap:10px;
+    padding:14px 16px;
+  }
+  .menu-btn{display:block;}
+  .nav-links{
+    width:100%;
+    display:none;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:0;
+    padding-top:8px;
+  }
+  .nav-links a{
+    width:100%;
+    padding:12px 0;
+    border-top:1px solid #1e293b;
+  }
+  .nav-links.show{display:flex;}
+  .cards{grid-template-columns:1fr;}
+  button{width:100%;}
+  .camera-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginWrapper">
+  <div class="login-box">
+    <h2>👤 User Login</h2>
+    <input id="uName" placeholder="Name">
+    <input id="uEmail" placeholder="Email">
+    <button onclick="userLogin()">Login as User</button>
+  </div>
+
+  <div class="login-box admin">
+    <h2>👮 Admin Login</h2>
+    <input id="aId" placeholder="Admin ID">
+    <input id="aPass" type="password" placeholder="Password">
+    <button onclick="adminLogin()">Login as Admin</button>
+    <p class="small-muted">admin / admin123</p>
+  </div>
+</div>
+
+<!-- ================= USER NAV ================= -->
+<nav id="userNav" class="user-nav">
+  <div>🚦 Smart Traffic</div>
+  <button class="menu-btn" onclick="toggleMenu('userLinks')">☰</button>
+  <div id="userLinks" class="nav-links">
+    <a href="#" onclick="showUser('dashboard')">Dashboard</a>
+    <a href="#" onclick="showUser('navigation')">Navigation</a>
+    <a href="#" onclick="showUser('traffic')">Traffic</a>
+    <a href="#" onclick="showUser('payments')">Payments</a>
+    <a href="#" onclick="showUser('profile')">Profile</a>
+    <a href="#" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<!-- ================= USER DASHBOARD ================= -->
+<section id="userDashboard" class="hidden container">
+  <h2>User Dashboard</h2>
+
+  <div class="cards">
+
+    <div class="card">
+      <h3>🚦 Traffic Status (Real-Time)</h3>
+      <input id="trafficPlace" placeholder="Enter place (example: Davangere Karnataka)">
+      <button style="margin-top:12px;" onclick="loadTrafficAndAlerts()">Load Traffic + Alerts</button>
+      <div id="trafficStatusBox" style="margin-top:12px;color:#94a3b8;">Traffic Status: Not loaded</div>
+      <div class="kpi" id="trafficKPIs"></div>
+    </div>
+
+    <div class="card">
+      <h3>🧭 Route Suggestion (Real)</h3>
+      <input id="dashFrom" placeholder="From (example: Davangere Railway Station)">
+      <input id="dashTo" placeholder="To (example: BIET Davangere)">
+      <button style="margin-top:12px;" onclick="findRouteSuggestion()">Get Best Route</button>
+      <div id="routeSuggestionBox" style="margin-top:12px;color:#94a3b8;">No route yet.</div>
+    </div>
+
+    <div class="card">
+      <h3>🔔 Alerts (Real-Time + Place)</h3>
+      <div id="alertsBox" style="margin-top:10px;"></div>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+        <button onclick="fetchAlertsNow()">Refresh Alerts</button>
+        <button class="btn-ghost" onclick="clearAlertsUI()">Clear</button>
+      </div>
+    </div>
+
+    <!-- ✅ ADDED: RIDE RECOMMENDATION + REDIRECTION -->
+    <div class="card">
+      <h3>🚕 Ride Recommendation</h3>
+      <p class="small-muted">Book a ride quickly using these apps.</p>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+        <button class="btn-ride" onclick="openRide('uber')">Open Uber</button>
+        <button class="btn-ride" onclick="openRide('ola')">Open Ola</button>
+        <button class="btn-ride" onclick="openRide('rapido')">Open Rapido</button>
+      </div>
+
+      <p id="rideHint" class="small-muted" style="margin-top:12px;">
+        Tip: Use Navigation page to choose best route before booking.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= USER NAVIGATION ================= -->
+<section id="userNavigation" class="hidden container">
+  <h2>🗺️ Smart Navigation (TomTom Map Inside)</h2>
+
+  <input id="source" placeholder="Source (example: Davangere Railway Station)">
+  <input id="destination" placeholder="Destination (example: BIET Davangere)">
+
+  <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+    <button onclick="calculateRoute()">Find Route (TomTom)</button>
+    <button class="btn-ghost" onclick="resetNav()">Reset</button>
+  </div>
+
+  <div id="navResult" style="margin-top:12px;color:#94a3b8;">
+    Enter source and destination to get route details.
+  </div>
+
+  <div id="navMap"></div>
+</section>
+
+<!-- ================= USER TRAFFIC (DEMO) ================= -->
+<section id="userTraffic" class="hidden container">
+  <h2>Traffic Density Overview (Demo)</h2>
+
+  <div class="cards">
+    <div class="card">
+      <h3>MG Road</h3>
+      <p>Status: <b>Heavy</b></p>
+      <p>Peak Time: 6–9 PM</p>
+    </div>
+
+    <div class="card">
+      <h3>Whitefield</h3>
+      <p>Status: <b>Moderate</b></p>
+      <p>Peak Time: 8–10 AM</p>
+    </div>
+
+    <div class="card">
+      <h3>BTM Layout</h3>
+      <p>Status: <b>Free Flow</b></p>
+      <p>Best Travel Time: Afternoon</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= USER PAYMENTS ================= -->
+<section id="userPayments" class="hidden container">
+  <h2>Payments</h2>
+  <p class="small-muted">Pay your traffic violation fines here (demo payment system).</p>
+
+  <table>
+    <thead><tr><th>Violation</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody id="userPaymentsTable"></tbody>
+  </table>
+</section>
+
+<section id="userProfile" class="hidden container">
+  <h2>Profile</h2>
+  <p><b>Name:</b> <span id="profileName"></span></p>
+  <p><b>Email:</b> <span id="profileEmail"></span></p>
+</section>
+
+<!-- ================= ADMIN NAV ================= -->
+<nav id="adminNav" class="admin-nav">
+  <div>🚦 Traffic Admin</div>
+  <button class="menu-btn" onclick="toggleMenu('adminLinks')">☰</button>
+  <div id="adminLinks" class="nav-links">
+    <a href="#" onclick="showAdmin('dashboard')">Dashboard</a>
+    <a href="#" onclick="showAdmin('cameras')">Cameras</a>
+    <a href="#" onclick="showAdmin('violations')">Violations</a>
+    <a href="#" onclick="showAdmin('analytics')">Analytics</a>
+    <a href="#" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<!-- ================= ADMIN DASHBOARD ================= -->
+<section id="adminDashboard" class="hidden container">
+  <h2>Admin Dashboard (Monitoring City Required)</h2>
+
+  <div class="card" style="margin-bottom:18px;">
+    <h3>🏙️ Enter Monitoring City</h3>
+
+    <!-- ✅ THIS IS WHERE YOU TYPE CITY NAME -->
+    <input id="adminCity" type="text"
+      placeholder="Enter Monitoring City (example: Davangere Karnataka)">
+
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+      <button type="button" onclick="saveMonitoringCity()">✅ Start Monitoring</button>
+      <button type="button" class="btn-danger" onclick="clearMonitoringCity()">❌ Clear City</button>
+      <button type="button" class="btn-ghost" onclick="loadAdminLiveData()">🔄 Refresh</button>
+    </div>
+
+    <p id="adminCityStatus" style="color:#94a3b8;margin-top:10px;">
+      Monitoring City: Not set
+    </p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>📍 Active Junctions</h3>
+      <p id="adminJunctions">Not loaded</p>
+    </div>
+
+    <div class="card">
+      <h3>🚨 Live Incidents (TomTom)</h3>
+      <p><span id="vCount">0</span> incidents nearby</p>
+      <div id="adminIncidentsMini" class="small-muted" style="margin-top:10px;">Not loaded</div>
+    </div>
+
+    <div class="card">
+      <h3>⏱ Traffic Speed</h3>
+      <p id="adminSpeed">Not loaded</p>
+      <div id="adminCongestion" class="small-muted" style="margin-top:10px;">Congestion: Not loaded</div>
+    </div>
+
+    <div class="card">
+      <h3>🚦 Signal Status</h3>
+      <p id="adminSignal">Monitoring city not set</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ADMIN CAMERAS ================= -->
+<section id="adminCameras" class="hidden container">
+  <h2>Camera Monitoring</h2>
+  <p class="small-muted">Demo live feeds (you can connect real CCTV later).</p>
+
+  <div class="camera-grid">
+    <div class="camera"><div class="feed">LIVE</div>Signal Jump</div>
+    <div class="camera"><div class="feed">LIVE</div>Overspeed</div>
+    <div class="camera"><div class="feed">LIVE</div>Normal</div>
+  </div>
+</section>
+
+<!-- ================= ADMIN VIOLATIONS ================= -->
+<section id="adminViolations" class="hidden container">
+  <h2>Violations</h2>
+  <p class="small-muted">Add demo violations and see them in user Payments.</p>
+
+  <button onclick="addViolation()">Add Demo Violation</button>
+
+  <table>
+    <thead><tr><th>User</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody id="adminViolationTable"></tbody>
+  </table>
+</section>
+
+<!-- ================= ADMIN ANALYTICS ================= -->
+<section id="adminAnalytics" class="hidden container">
+  <h2>Traffic Analytics (Monitoring City Required)</h2>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button onclick="loadAdminAnalytics()">Load Live Analytics</button>
+    <button class="btn-ghost" onclick="loadAdminLiveData()">Refresh Dashboard Data</button>
+  </div>
+
+  <div id="adminAnalyticsBox" style="margin-top:12px;color:#94a3b8;"></div>
+</section>
+
+<script>
+/* ================= TOMTOM KEY ================= */
+const TOMTOM_KEY = "lsyE4edVPPXZUIoxEXOd3ScRoprgB7xS"; // ✅ your real key
+
+/* ================= GLOBAL ================= */
+let CURRENT_CENTER = null;
+let ADMIN_CENTER = null;
+let ADMIN_CITY_SET = false;
+
+let role="", currentUserEmail="";
+let navMap = null;
+let navMarkers = [];
+let adminAutoTimer = null;
+
+/* ================= Ride Redirection ================= */
+function openRide(app){
+  // Opens ride apps websites (works on mobile too)
+  if(app==="uber"){
+    window.open("https://m.uber.com/looking", "_blank");
+  }else if(app==="ola"){
+    window.open("https://www.olacabs.com/", "_blank");
+  }else if(app==="rapido"){
+    window.open("https://www.rapido.bike/", "_blank");
+  }
+}
+
+/* ================= ADMIN CITY REQUIRED ================= */
+function requireAdminCity(){
+  if(!ADMIN_CITY_SET){
+    alert("⚠️ Please enter Monitoring City first!");
+    showAdmin("dashboard");
+    document.getElementById("adminCity").focus();
+    return false;
+  }
+  return true;
+}
+
+function loadSavedMonitoringCity(){
+  const saved = localStorage.getItem("monitoringCity");
+  if(saved){
+    document.getElementById("adminCity").value = saved;
+    document.getElementById("adminCityStatus").innerHTML =
+      `Monitoring City: <b>${saved}</b> (Saved ✅)`;
+    ADMIN_CITY_SET = true;
+  }else{
+    ADMIN_CITY_SET = false;
+    document.getElementById("adminCityStatus").innerHTML =
+      `Monitoring City: <b style="color:#fca5a5;">Not set</b>`;
+  }
+}
+
+function clearMonitoringCity(){
+  localStorage.removeItem("monitoringCity");
+  ADMIN_CITY_SET = false;
+  ADMIN_CENTER = null;
+
+  document.getElementById("adminCity").value = "";
+  document.getElementById("adminCityStatus").innerHTML =
+    `Monitoring City: <b style="color:#fca5a5;">Not set</b>`;
+
+  document.getElementById("adminSignal").innerText = "Monitoring city not set";
+  document.getElementById("adminSpeed").innerText = "Not loaded";
+  document.getElementById("adminCongestion").innerText = "Congestion: Not loaded";
+  document.getElementById("vCount").innerText = "0";
+  document.getElementById("adminJunctions").innerText = "Not loaded";
+  document.getElementById("adminIncidentsMini").innerText = "Not loaded";
+
+  stopAdminAutoRefresh();
+  alert("Monitoring city cleared ❌");
+}
+
+/* ================= TOMTOM HELPERS ================= */
+async function geocodePlace(placeName){
+  const url = `https://api.tomtom.com/search/2/geocode/${encodeURIComponent(placeName)}.json?key=${TOMTOM_KEY}&limit=1&countrySet=IN`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if(data.error) throw new Error(data.error.description || "Geocode error");
+  if(!data.results || data.results.length === 0) throw new Error("Place not found: " + placeName);
+
+  return data.results[0].position;
+}
+
+async function getFlowData(lat, lon){
+  const url = `https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key=${TOMTOM_KEY}&point=${lat},${lon}&zoom=12`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if(data.error) throw new Error(data.error.description || "Traffic flow error");
+
+  return {
+    currentSpeed: data.flowSegmentData.currentSpeed,
+    freeFlowSpeed: data.flowSegmentData.freeFlowSpeed
+  };
+}
+
+async function getIncidents(lat, lon){
+  const delta = 0.10;
+  const latMin = lat - delta;
+  const latMax = lat + delta;
+  const lonMin = lon - delta;
+  const lonMax = lon + delta;
+
+  const url =
+    `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${TOMTOM_KEY}` +
+    `&bbox=${lonMin},${latMin},${lonMax},${latMax}` +
+    `&fields={incidents{properties{events{description}}}}&language=en-GB`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+  return (data?.incidents || []);
+}
+
+function getCongestionStatus(currentSpeed, freeFlowSpeed){
+  const ratio = currentSpeed / freeFlowSpeed;
+  let status="Normal 🟢";
+  if(ratio > 0.8) status="Free Flow 🟢";
+  else if(ratio > 0.5) status="Moderate 🟠";
+  else status="Heavy 🔴";
+
+  const congestionPercent = Math.max(0, Math.min(100, Math.round((1 - ratio) * 100)));
+  return { status, congestionPercent, ratio };
+}
+
+/* ================= ADMIN MONITORING ================= */
+async function saveMonitoringCity(){
+  const city = document.getElementById("adminCity").value.trim();
+  if(!city){
+    alert("⚠️ Enter Monitoring City!");
+    return;
+  }
+
+  document.getElementById("adminCityStatus").innerHTML = "Saving city...";
+
+  try{
+    const pos = await geocodePlace(city);
+    ADMIN_CENTER = { lat: pos.lat, lon: pos.lon };
+    ADMIN_CITY_SET = true;
+    localStorage.setItem("monitoringCity", city);
+
+    document.getElementById("adminCityStatus").innerHTML =
+      `Monitoring City: <b>${city}</b> ✅`;
+
+    await loadAdminLiveData();
+    startAdminAutoRefresh();
+
+  }catch(err){
+    ADMIN_CITY_SET = false;
+    ADMIN_CENTER = null;
+    document.getElementById("adminCityStatus").innerHTML =
+      `<span style="color:#fca5a5;">❌ ${err.message}</span>`;
+  }
+}
+
+async function loadAdminLiveData(){
+  if(!requireAdminCity()) return;
+  if(!ADMIN_CENTER) return;
+
+  try{
+    const incidents = await getIncidents(ADMIN_CENTER.lat, ADMIN_CENTER.lon);
+    document.getElementById("vCount").innerText = incidents.length;
+
+    if(incidents.length === 0){
+      document.getElementById("adminIncidentsMini").innerHTML = "No incidents near monitoring city ✅";
+    }else{
+      const top = incidents.slice(0,3).map(i => i?.properties?.events?.[0]?.description || "Incident nearby");
+      document.getElementById("adminIncidentsMini").innerHTML =
+        top.map(t => `• ${t}`).join("<br>");
+    }
+
+    const flow = await getFlowData(ADMIN_CENTER.lat, ADMIN_CENTER.lon);
+    const c = getCongestionStatus(flow.currentSpeed, flow.freeFlowSpeed);
+
+    document.getElementById("adminSpeed").innerHTML = `<b>${flow.currentSpeed} km/h</b>`;
+    document.getElementById("adminCongestion").innerHTML =
+      `Congestion: <b>${c.status}</b> | <b>${c.congestionPercent}%</b>`;
+
+    document.getElementById("adminSignal").innerHTML = `Live Monitoring ON ✅`;
+    document.getElementById("adminJunctions").innerHTML = `<b>12 junctions</b> monitored (demo)`;
+
+  }catch(err){
+    document.getElementById("adminSignal").innerHTML =
+      `<span style="color:#fca5a5;">❌ ${err.message}</span>`;
+  }
+}
+
+function startAdminAutoRefresh(){
+  stopAdminAutoRefresh();
+  adminAutoTimer = setInterval(() => {
+    if(ADMIN_CITY_SET && ADMIN_CENTER){
+      loadAdminLiveData();
+    }
+  }, 30000);
+}
+
+function stopAdminAutoRefresh(){
+  if(adminAutoTimer){
+    clearInterval(adminAutoTimer);
+    adminAutoTimer = null;
+  }
+}
+
+/* ================= ADMIN ANALYTICS ================= */
+async function loadAdminAnalytics(){
+  if(!requireAdminCity()) return;
+  if(!ADMIN_CENTER) return;
+
+  const box = document.getElementById("adminAnalyticsBox");
+  box.innerHTML = "Loading analytics...";
+
+  try{
+    const flow = await getFlowData(ADMIN_CENTER.lat, ADMIN_CENTER.lon);
+    const incidents = await getIncidents(ADMIN_CENTER.lat, ADMIN_CENTER.lon);
+    const c = getCongestionStatus(flow.currentSpeed, flow.freeFlowSpeed);
+
+    box.innerHTML = `
+      <div class="card" style="margin-top:12px;">
+        <h3>📊 Live Summary</h3>
+        <div class="kpi">
+          <span>Speed: ${flow.currentSpeed} km/h</span>
+          <span>Free Speed: ${flow.freeFlowSpeed} km/h</span>
+          <span>Congestion: ${c.congestionPercent}%</span>
+          <span>Incidents: ${incidents.length}</span>
+        </div>
+        <p style="margin-top:12px;color:#94a3b8;">
+          <b>Status:</b> ${c.status}<br>
+          <b>Last Updated:</b> ${new Date().toLocaleString()}
+        </p>
+      </div>
+    `;
+  }catch(err){
+    box.innerHTML = `<span style="color:#fca5a5;">❌ ${err.message}</span>`;
+  }
+}
+
+/* ================= USER ROUTE SUGGESTION ================= */
+async function findRouteSuggestion(){
+  const fromText = document.getElementById("dashFrom").value.trim();
+  const toText = document.getElementById("dashTo").value.trim();
+  const box = document.getElementById("routeSuggestionBox");
+
+  if(!fromText || !toText){
+    alert("Enter From and To locations!");
+    return;
+  }
+
+  box.innerHTML = `<span style="color:#94a3b8;">Finding best route...</span>`;
+
+  try{
+    const fromPos = await geocodePlace(fromText);
+    const toPos = await geocodePlace(toText);
+
+    const url = `https://api.tomtom.com/routing/1/calculateRoute/${fromPos.lat},${fromPos.lon}:${toPos.lat},${toPos.lon}/json?key=${TOMTOM_KEY}&traffic=true&maxAlternatives=2`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if(data.error){
+      box.innerHTML = `<span style="color:#fca5a5;">❌ ${data.error.description}</span>`;
+      return;
+    }
+
+    if(!data.routes || data.routes.length===0){
+      box.innerHTML = `<span style="color:#fca5a5;">No route found ❌</span>`;
+      return;
+    }
+
+    let html = "";
+    data.routes.forEach((r, i) => {
+      const s = r.summary;
+      const km = (s.lengthInMeters/1000).toFixed(2);
+      const min = Math.round(s.travelTimeInSeconds/60);
+      html += `<div style="margin-bottom:10px;padding:10px;border:1px solid #1e293b;border-radius:12px;">
+        <b>Route ${i+1}</b><br>
+        Distance: <b>${km} km</b><br>
+        Time: <b>${min} min</b>
+      </div>`;
+    });
+
+    box.innerHTML = html;
+
+  }catch(err){
+    box.innerHTML = `<span style="color:#fca5a5;">❌ ${err.message}</span>`;
+  }
+}
+
+/* ================= USER TRAFFIC + ALERTS ================= */
+async function loadTrafficAndAlerts(){
+  const place = document.getElementById("trafficPlace").value.trim();
+  const kpiBox = document.getElementById("trafficKPIs");
+
+  if(!place){
+    alert("Enter a place for traffic status!");
+    return;
+  }
+
+  document.getElementById("trafficStatusBox").innerHTML = "Loading traffic status...";
+  kpiBox.innerHTML = "";
+
+  try{
+    const pos = await geocodePlace(place);
+    CURRENT_CENTER = { lat: pos.lat, lon: pos.lon };
+
+    const flow = await getFlowData(pos.lat, pos.lon);
+    const c = getCongestionStatus(flow.currentSpeed, flow.freeFlowSpeed);
+
+    document.getElementById("trafficStatusBox").innerHTML =
+      `Traffic Status near <b>${place}</b>: <b>${c.status}</b><br>
+       Speed: <b>${flow.currentSpeed} km/h</b>`;
+
+    kpiBox.innerHTML = `
+      <span>Congestion: ${c.congestionPercent}%</span>
+      <span>Free Speed: ${flow.freeFlowSpeed} km/h</span>
+      <span>Updated: ${new Date().toLocaleTimeString()}</span>
+    `;
+
+    fetchAlertsNow();
+
+  }catch(err){
+    document.getElementById("trafficStatusBox").innerHTML =
+      `<span style="color:#fca5a5;">❌ ${err.message}</span>`;
+  }
+}
+
+function clearAlertsUI(){
+  document.getElementById("alertsBox").innerHTML = `<p style="color:#94a3b8;margin:0;">Alerts cleared.</p>`;
+}
+
+async function fetchAlertsNow(){
+  const box = document.getElementById("alertsBox");
+
+  if(!CURRENT_CENTER){
+    box.innerHTML = `<p style="color:#94a3b8;margin:0;">Enter place in Traffic Status card first.</p>`;
+    return;
+  }
+
+  box.innerHTML = `<p style="color:#94a3b8;margin:0;">Loading alerts...</p>`;
+
+  try{
+    const incidents = await getIncidents(CURRENT_CENTER.lat, CURRENT_CENTER.lon);
+
+    if(incidents.length === 0){
+      box.innerHTML = `<p style="color:#94a3b8;margin:0;">No real-time alerts near selected place ✅</p>`;
+      return;
+    }
+
+    box.innerHTML = "";
+    incidents.slice(0,6).forEach((inc) => {
+      const msg = inc?.properties?.events?.[0]?.description || "Traffic incident nearby";
+      box.innerHTML += `
+        <div class="alert-item">
+          <b>Live Alert</b> - ${msg}<br>
+          <small style="color:#94a3b8;">Updated: ${new Date().toLocaleString()}</small>
+        </div>
+      `;
+    });
+
+  }catch(err){
+    box.innerHTML = `<p style="color:#fca5a5;margin:0;">Failed to load alerts ❌</p>`;
+  }
+}
+
+/* ================= NAVIGATION MAP (TomTom) ================= */
+function initNavMap(){
+  if(navMap) return;
+
+  navMap = tt.map({
+    key: TOMTOM_KEY,
+    container: "navMap",
+    center: [75.9218, 14.4644],
+    zoom: 12
+  });
+
+  navMap.addControl(new tt.NavigationControl());
+}
+
+function clearNavMarkers(){
+  navMarkers.forEach(m => m.remove());
+  navMarkers = [];
+}
+
+function clearRouteLayer(){
+  if(navMap && navMap.getLayer("routeLine")) navMap.removeLayer("routeLine");
+  if(navMap && navMap.getSource("routeSource")) navMap.removeSource("routeSource");
+}
+
+function resetNav(){
+  document.getElementById("source").value = "";
+  document.getElementById("destination").value = "";
+  document.getElementById("navResult").innerHTML = "Enter source and destination to get route details.";
+  clearNavMarkers();
+  clearRouteLayer();
+}
+
+async function calculateRoute(){
+  initNavMap();
+
+  const from = document.getElementById("source").value.trim();
+  const to = document.getElementById("destination").value.trim();
+
+  if(!from || !to){
+    alert("Enter Source and Destination!");
+    return;
+  }
+
+  document.getElementById("navResult").innerHTML = "Finding route...";
+
+  try{
+    const fromPos = await geocodePlace(from);
+    const toPos = await geocodePlace(to);
+
+    const url = `https://api.tomtom.com/routing/1/calculateRoute/${fromPos.lat},${fromPos.lon}:${toPos.lat},${toPos.lon}/json?key=${TOMTOM_KEY}&traffic=true&routeRepresentation=polyline`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if(data.error){
+      document.getElementById("navResult").innerHTML =
+        `<span style="color:#fca5a5;">❌ ${data.error.description}</span>`;
+      return;
+    }
+
+    if(!data.routes || data.routes.length === 0){
+      document.getElementById("navResult").innerHTML = "No route found ❌";
+      return;
+    }
+
+    const s = data.routes[0].summary;
+    const km = (s.lengthInMeters/1000).toFixed(2);
+    const min = Math.round(s.travelTimeInSeconds/60);
+
+    document.getElementById("navResult").innerHTML =
+      `<b>Route Found ✅</b><br>Distance: <b>${km} km</b> | Time: <b>${min} min</b>`;
+
+    clearNavMarkers();
+    clearRouteLayer();
+
+    navMap.setCenter([fromPos.lon, fromPos.lat]);
+    navMap.setZoom(12);
+
+    navMarkers.push(new tt.Marker().setLngLat([fromPos.lon, fromPos.lat]).addTo(navMap));
+    navMarkers.push(new tt.Marker().setLngLat([toPos.lon, toPos.lat]).addTo(navMap));
+
+    const points = data.routes[0]?.legs?.[0]?.points;
+    if(points && points.length > 0){
+      const coords = points.map(p => [p.longitude, p.latitude]);
+
+      navMap.addSource("routeSource", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: coords }
+        }
+      });
+
+      navMap.addLayer({
+        id: "routeLine",
+        type: "line",
+        source: "routeSource",
+        paint: { "line-width": 5 }
+      });
+
+      const bounds = coords.reduce((b, c) => b.extend(c), new tt.LngLatBounds(coords[0], coords[0]));
+      navMap.fitBounds(bounds, { padding: 60 });
+    }
+
+  }catch(err){
+    document.getElementById("navResult").innerHTML =
+      `<span style="color:#fca5a5;">❌ ${err.message}</span>`;
+  }
+}
+
+/* ================= VIOLATIONS + PAYMENTS (DEMO) ================= */
+function addViolation(){
+  let v = JSON.parse(localStorage.getItem("violations")) || [];
+  v.push({
+    email: currentUserEmail || "demo@gmail.com",
+    type: "Signal Jump",
+    amount: 500,
+    status: "Pending"
+  });
+  localStorage.setItem("violations", JSON.stringify(v));
+  loadAdminViolations();
+}
+
+function loadAdminViolations(){
+  let v = JSON.parse(localStorage.getItem("violations")) || [];
+  document.getElementById("adminViolationTable").innerHTML = "";
+  v.forEach(x=>{
+    document.getElementById("adminViolationTable").innerHTML +=
+      `<tr><td>${x.email}</td><td>${x.type}</td><td>₹${x.amount}</td><td>${x.status}</td></tr>`;
+  });
+}
+
+function loadUserPayments(){
+  let v = JSON.parse(localStorage.getItem("violations")) || [];
+  document.getElementById("userPaymentsTable").innerHTML = "";
+
+  v.filter(x=>x.email===currentUserEmail).forEach((x,i)=>{
+    document.getElementById("userPaymentsTable").innerHTML += `
+      <tr>
+        <td>${x.type}</td>
+        <td>₹${x.amount}</td>
+        <td>${x.status==="Pending"
+          ? `<button onclick="payFine(${i})">Pay</button>`
+          : "Paid"
+        }</td>
+      </tr>`;
+  });
+}
+
+function payFine(i){
+  let v = JSON.parse(localStorage.getItem("violations"));
+  if(!v || !v[i]) return;
+  v[i].status="Paid";
+  localStorage.setItem("violations", JSON.stringify(v));
+  loadUserPayments();
+}
+
+/* ================= UI HELPERS ================= */
+function toggleMenu(id){
+  document.getElementById(id).classList.toggle("show");
+}
+
+/* LOGIN */
+function userLogin(){
+  const name = document.getElementById("uName").value.trim();
+  const email = document.getElementById("uEmail").value.trim();
+  if(!name || !email){ alert("Enter details"); return; }
+
+  role="user";
+  currentUserEmail=email;
+
+  document.getElementById("profileName").innerText=name;
+  document.getElementById("profileEmail").innerText=email;
+
+  document.getElementById("loginWrapper").style.display="none";
+  document.getElementById("userNav").style.display="flex";
+  showUser("dashboard");
+}
+
+function adminLogin(){
+  const id = document.getElementById("aId").value.trim();
+  const pass = document.getElementById("aPass").value.trim();
+
+  if(id==="admin" && pass==="admin123"){
+    role="admin";
+    document.getElementById("loginWrapper").style.display="none";
+    document.getElementById("adminNav").style.display="flex";
+    showAdmin("dashboard");
+
+    setTimeout(() => {
+      loadSavedMonitoringCity();
+      alert("✅ Admin Login Successful!\nEnter Monitoring City and click Start Monitoring.");
+      document.getElementById("adminCity").focus();
+    }, 200);
+
+  } else alert("Invalid admin login");
+}
+
+/* Show pages */
+function showUser(p){
+  document.querySelectorAll("[id^='user']").forEach(s=>s.classList.add("hidden"));
+  document.getElementById("user"+p.charAt(0).toUpperCase()+p.slice(1)).classList.remove("hidden");
+
+  if(p==="navigation"){
+    setTimeout(() => initNavMap(), 200);
+  }
+  if(p==="payments"){
+    loadUserPayments();
+  }
+}
+
+function showAdmin(p){
+  if(p !== "dashboard"){
+    if(!requireAdminCity()) return;
+  }
+  document.querySelectorAll("[id^='admin']").forEach(s=>s.classList.add("hidden"));
+  document.getElementById("admin"+p.charAt(0).toUpperCase()+p.slice(1)).classList.remove("hidden");
+
+  if(p==="violations"){
+    loadAdminViolations();
+  }
+}
+
+/* Logout */
+function logout(){
+  stopAdminAutoRefresh();
+  location.reload();
+}
+</script>
+
+</body>
+</html>
